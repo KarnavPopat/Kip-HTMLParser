@@ -22,22 +22,17 @@ class Reader:
                         th.writelines('            <h3 style="text-align: right">'
                                       + str(author) + '</h3><br>')
 
-                    if "<p id='para1'>" in line:
-                        th.write("            <p>"+str(fulltext[4])+"</p>\n")
-                    if "<p id='para2'>" in line:
-                        th.writelines("            <p>" + str(fulltext[6]) + "</p>\n")
-                    if "<p id='para3'></p>" in line:
-                        th.writelines("            <p>" + str(fulltext[8]) + "</p>\n")
-                    if "<p id='para4'></p>" in line:
-                        th.writelines("            <p>" + str(fulltext[10]) + "</p>\n")
-                    if "<p id='para5'></p>" in line:
-                        th.writelines("            <p>" + str(fulltext[12]) + "</p>\n")
-                    if "<p id='para6'></p>" in line:
-                        th.writelines("            <p>" + str(fulltext[14]) + "</p>\n")
-                    if "<p id='para7'></p>" in line:
-                        th.writelines("            <p>" + str(fulltext[16]) + "</p>\n")
-                    else:
-                        th.writelines(line)
+                    try:
+                        for index in range(1, 20):
+                            if "p id='para"+str(index)+"'" in line:
+                                th.write("            <p>" + str(fulltext[2+(2*index)]) + "</p>\n")
+                                break
+
+                        if "p id='para" + str(index) + "'" not in line:
+                            th.write(line)
+
+                    except:
+                        pass
                 else:
                     th.writelines(line)
 
