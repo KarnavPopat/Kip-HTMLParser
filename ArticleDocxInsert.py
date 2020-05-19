@@ -1,9 +1,10 @@
+import sys
 import docx
 
 
 class Reader:
 
-    def main(self):
+    def main(self, articlecode):
         file = docx.Document('article.docx')
         fulltext = []
         for para in file.paragraphs:
@@ -11,9 +12,9 @@ class Reader:
         title = fulltext[0].strip()
         author = fulltext[2].strip()
 
-        with open('Example.html', 'r+', encoding='UTF8') as t:
+        with open('D:/CS/web/Verity/half done/single.html', 'r+', encoding='UTF8') as t:
             deleter = 0
-            th = open('ArticlePage.html', 'w')
+            th = open('D:/CS/web/Verity/half done/ArticlePage'+str(articlecode)+'.html', 'w')
             for i, line in enumerate(t, start=0):
                 if 60 <= i <= 100:
                     if deleter:
@@ -21,9 +22,9 @@ class Reader:
                         deleter = 0
                         continue
 
-                    if '<h1 class="titlehere mb-3"><font color = "white"><b>' in line:
-                        th.write('                          <h1 class="mb-3" style="text-align: center"><font color = '
-                                 '"white"><b>' + str(title) + '</b></font></h1>\n')
+                    if '<h1 class="titlehere mb-3"><font color = "white"><b></font></b></h1>' in line:
+                        th.write('                          <h1 class="mb-3" style="text-align: center">'
+                                 '<b>' + str(title) + '</b></h1>\n')
                         deleter = 1
                         continue
                     if '<h3 class="authorhere mb-3"></h3>' in line:
@@ -33,9 +34,10 @@ class Reader:
                         continue
 
                     try:
-                        for index in range(1, 20):
+                        for index in range(1, 21):
                             if "p id='para" + str(index) + "'" in line:
-                                th.write("                          <p>" + str(fulltext[2 + (2 * index)]) + "</p>\n")
+                                th.write('                          <p class="articleparagraph">'
+                                         + str(fulltext[2 + (2 * index)]) + "</p>\n")
                                 break
 
                         if "p id='para" + str(index) + "'" not in line:
@@ -48,4 +50,5 @@ class Reader:
 
 
 obj = Reader()
-obj.main()
+obj.main(input("Enter an article code: "))
+sys.exit(0)
