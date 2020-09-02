@@ -1,2 +1,2 @@
-# Kip-HTMLParser
-HTML File Handler to accept a text input and insert it into html paragraphs
+# Verity-ArticleDocxInsert
+Script for the Verity platform to accept the article as a pre-formatted .docx, and insert it into the article page, writer page, and department page.
