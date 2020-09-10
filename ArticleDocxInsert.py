@@ -25,7 +25,7 @@ class VerityPlatform:
 
     def extract_article_contents(self, article_number_code):
         # call the article doc
-        file = docx.Document('D:/CS/web/Verity/2.0/articles/article' + str(article_number_code) + '.docx')
+        file = docx.Document('D:/CS/web/Verity/Verily/articles/article' + str(article_number_code) + '.docx')
 
         # extract the article into paragraphs and substitute special characters
         for para in file.paragraphs:
@@ -97,8 +97,8 @@ class VerityPlatform:
 
     def create_article_page(self, article_number_code):
 
-        with open('D:/CS/web/Verity/2.0/article-template.html', 'r+', encoding='UTF-8') as template:
-            with open('D:/CS/web/Verity/2.0/a-' + str(self.department_code) + '-' +
+        with open('D:/CS/web/Verity/Verily/article-template.html', 'r+', encoding='UTF-8') as template:
+            with open('D:/CS/web/Verity/Verily/a-' + str(self.department_code) + '-' +
                       str(self.article_title_code) + '.html', 'w') as article_page:
 
                 # iterate the article-template page
@@ -148,7 +148,9 @@ class VerityPlatform:
                     # insert the description of the primary author
                     if '<p class="tc">Karnav Popat is a regular writer for Verity Today.</p>' in line:
                         article_page.write('<p class="tc">' +
-                                           descriptions[str(self.writerpage_codes[0])] + '</p>\n')
+                                           descriptions.get(self.writerpage_codes[0],
+                                                            (self.author_names[0] + " is a writer for Verity Today."))
+                                           + '</p>\n')
                         continue
 
                     # iterate over the other authors and insert details
@@ -170,7 +172,9 @@ class VerityPlatform:
                             if '<p class="tc">Karnav Popat' + str(author_number) + \
                                     ' is a regular writer for Verity Today.</p>' in line:
                                 article_page.write('<p class="tc">' +
-                                                   descriptions[str(self.writerpage_codes[author_number-1])] + '</p>\n')
+                                                   descriptions.get(self.writerpage_codes[author_number-1],
+                                                                    (self.author_names[author_number-1] +
+                                                                     " is a writer for Verity Today.")) + '</p>\n')
                                 found = True
                                 break
                     if found:
@@ -201,13 +205,13 @@ class VerityPlatform:
 
     def insert_department_page(self, article_number_code):
 
-        with open('D:/CS/web/Verity/2.0/d-' + str(self.department_code) + '.html', 'r+') as department_page:
-            with open('D:/CS/web/Verity/2.0/d-temp.html', 'r+') as temporary_page:
+        with open('D:/CS/web/Verity/Verily/d-' + str(self.department_code) + '.html', 'r+') as department_page:
+            with open('D:/CS/web/Verity/Verily/d-temp.html', 'r+') as temporary_page:
                 for i, line in enumerate(department_page, start=0):
                     temporary_page.writelines(line)
 
-        with open('D:/CS/web/Verity/2.0/d-temp.html', 'r+') as temporary_page:
-            with open('D:/CS/web/Verity/2.0/d-' + str(self.department_code) + '.html', 'w') as department_page:
+        with open('D:/CS/web/Verity/Verily/d-temp.html', 'r+') as temporary_page:
+            with open('D:/CS/web/Verity/Verily/d-' + str(self.department_code) + '.html', 'w') as department_page:
                 finished = False
                 for i, line in enumerate(temporary_page, start=0):
 
@@ -249,17 +253,17 @@ class VerityPlatform:
         # iterate over the list of authors of the article
         for author_counter in range(0, len(self.author_names)):
 
-            # check if a w-page already exists for the author
-            if not os.path.isfile('D:/CS/web/Verity/2.0/test-' + self.writerpage_codes[author_counter] + '.html'):
+            # check if a w-page needs to be created for the author
+            if not os.path.isfile('D:/CS/web/Verity/Verily/' + self.writerpage_codes[author_counter] + '.html'):
 
-                with open('D:/CS/web/Verity/2.0/w-template.html', 'r+') as writer_template:
-                    with open('D:/CS/web/Verity/2.0/' + self.writerpage_codes[author_counter] +
+                with open('D:/CS/web/Verity/Verily/w-template.html', 'r+') as writer_template:
+                    with open('D:/CS/web/Verity/Verily/' + self.writerpage_codes[author_counter] +
                               '.html', 'w') as writer_page:
 
                         # iterate the w-template page
                         for i, line in enumerate(writer_template, start=0):
 
-                            # insert the article title into the head title
+                            # insert the author name into the head title
                             if '<title>Author</title>' in line:
                                 writer_page.write('<title>' + self.author_names[author_counter] + '</title>\n')
                                 continue
@@ -281,7 +285,7 @@ class VerityPlatform:
                             # insert the author profile picture into the header section
                             if '<div class="img" style="background-image: url(images/w-author.jpg);">' in line:
                                 # check if a personal profile picture exists and insert it if it does
-                                if os.path.isfile('D:/CS/web/Verity/2.0/images/' +
+                                if os.path.isfile('D:/CS/web/Verity/Verily/images/' +
                                                   self.writerpage_codes[author_counter] + '.jpg'):
                                     writer_page.write('<div class="img" style="background-image: url(images/' +
                                                       self.writerpage_codes[author_counter] + '.jpg);">\n')
@@ -331,46 +335,71 @@ class VerityPlatform:
                             else:
                                 writer_page.writelines(line)
 
-            print("Writer page created successfully, 0")
+                print("Writer page created successfully, 0")
+
+            # check if a w-page already exists for the author
+            elif os.path.isfile('D:/CS/web/Verity/Verily/' + self.writerpage_codes[author_counter] + '.html'):
+
+                with open('D:/CS/web/Verity/Verily/' + self.writerpage_codes[author_counter] +
+                          '.html', 'r+') as writer_page:
+                    with open('D:/CS/web/Verity/Verily/w-temp.html', 'w') as temp_writer:
+                        for i, line in enumerate(writer_page, start=0):
+                            temp_writer.writelines(line)
+
+                with open('D:/CS/web/Verity/Verily/w-temp.html', 'r+') as temp_writer:
+                    with open('D:/CS/web/Verity/Verily/' + self.writerpage_codes[author_counter] +
+                              '.html', 'r+') as writer_page:
+                        finished = False
+
+                        for i, line in enumerate(temp_writer, start=0):
+
+                            if '<div class="article"></div>' in line and not finished:
+
+                                writer_page.write('<div class="col-md-4 searchable">\n')
+                                writer_page.write('<div class="blog-entry ftco-animate">\n')
+                                writer_page.write('<a href="/' + self.articlepage_code +
+                                                  '" class="img img-2" style="background-image: url(articles/article'
+                                                  + str(article_number_code) + '.jpg);"></a>\n')
+                                writer_page.write('<div class="text text-2 pt-2 mt-3">\n')
+                                writer_page.write('<a href="/' + self.articlepage_code + '"><h3 class="mb-2 hc">' +
+                                                  self.article_title_insert + '</h3></a>\n')
+                                writer_page.write('<div class="meta-wrap">\n')
+                                writer_page.write('<p class="meta">\n')
+                                writer_page.write('<span><i class="icon-calendar mr-2"></i>June 2020</span>\n')
+                                writer_page.write('<span><i class="icon-folder-o mr-2"></i><a href="/' +
+                                                  self.department_code + '" class="hc">' +
+                                                  self.department + '</a></span>\n')
+                                writer_page.write('</p>\n')
+                                writer_page.write('</div>\n')
+                                writer_page.write('</div>\n')
+                                writer_page.write('</div>\n')
+                                writer_page.write('</div>\n\n')
+                                writer_page.write('<div class="article"></div>\n')
+                                finished = True
+
+                            else:
+                                writer_page.writelines(line)
+
+                print("Writer page updated successfully, 0")
 
 
 descriptions = {'w-karnavpopat': 'Karnav writes on Business & Economics and Technology, and heads '
                                  'the Sports department. He also helps with the Technical Team.',
                 'w-manavagarwal': 'Manav is the Head of the Technology Department for Verity Today.',
-                'w-achintyanewatia': 'Achintya is a regular writer for Verity Today.',
-                'w-raunakkjalan': 'Raunakk is a regular writer for Verity Today.',
-                'w-shubhamagarwal': 'Shubham is a regular writer for Verity Today.',
-                'w-aaravmidha': 'Aarav is a regular writer for Verity Today.',
-                'w-vedantmohata': 'Vedant is a regular writer for Verity Today.',
-                'w-oisheeroychowdhury': 'Oishee is a regular writer for Verity Today.',
-                'w-pradyumnnahata': 'Pradyumn writes on Business & Economics and Sports, and heads the Entertainment '
-                                ' department.',
-                'w-gauravrampuria': 'Gaurav is a regular writer for Verity Today.',
-                'w-avyaytulsyan': 'Avyay writes on Business & Economics and Sports, and heads the Global Affairs & '
-                                'Politics department.',
+                'w-pradyumnnahata': 'Pradyumn writes on Business & Economics and Sports, '
+                                    'and heads the Entertainment department.',
+                'w-avyaytulsyan': 'Avyay writes on Business & Economics and Sports, '
+                                  'and heads the Global Affairs & Politics department.',
                 'w-akashnath': 'Akash is the Head of the Social Change Department for Verity Today.',
                 'w-rishitachatterjee': 'Rishita is the Head of the Business & Eco Department for Verity Today.',
                 'w-kunjikakanoi': 'Kunjika is the Head of the Creativity Department for Verity Today.',
                 'w-siddharthshroff': 'Siddharth is the Head of the Social Change Department for Verity Today.',
-                'w-anjalisurana': 'Anjali is a regular writer for Verity Today.',
                 'w-nityakaul': 'Nitya is the Head of the Creativity Department for Verity Today.',
-                'w-dhruvchandra': 'Dhruv is a regular writer for Verity Today.',
                 'w-eshanbanerjie': 'Eshan is the Head of the Panel Discussions Department for Verity Today.',
-                'w-mainaksarkar': 'Mainak is a regular writer for Verity Today.',
-                'w-akshatsahay': 'Akshat is a regular writer for Verity Today.',
-                'w-meghalahiri': 'Megha is a regular writer for Verity Today.',
-                'w-ruchikabhowsinghka': 'Ruchika is a regular writer for Verity Today.',
                 'w-arunavghosh': 'Arunav is the Head of the Education Department for Verity Today.',
                 'w-sarahaziz': 'Sarah is a contributor for Verity Today.',
                 'w-raaginipoddar': 'Raagini is a contributor for Verity Today.',
-                'w-srijanbhattacharya': 'Srijan is a regular writer for Verity Today.',
                 'w-sonakshiroychoudhury': 'Sonakshi is the Head of the Social Media Department for Verity Today.',
-                'w-anujpoddar': 'Anuj is a regular writer for Verity Today.',
-                'w-mohanrajagopal': 'Mohan is a regular writer for Verity Today.',
-                'w-araiyabhattacharjee': 'Araiya is a regular writer for Verity Today.',
-                'w-ayushibanerjee': 'Ayushi is a regular writer for Verity Today.',
-                'w-dibyachoudhary': 'Dibya is a regular writer for Verity Today.',
-                'w-riddhidasgupta': 'Riddhi is a regular writer for Verity Today.',
                 'w-adyasarda': 'Adya leads Project Abhay, a project in collaboration with Verity Today.',
                 'w-vartikajain': 'Varitka leads Project Abhay, a project in collaboration with Verity Today.'
                 }
@@ -381,7 +410,7 @@ if __name__ == '__main__':
     w_page = input('Do you want to insert the articles into the author page(s)?')
 
     # insert the articles
-    for code in range(44, 45):
+    for code in range(46, 47):
         # exclude the articles which need image grid templates
         if code in [8, 12, 31, 34, 36]:
             continue
@@ -391,8 +420,10 @@ if __name__ == '__main__':
             print(code)  # article number
             obj.extract_article_contents(code)
             obj.create_article_page(code)
-            obj.insert_department_page(code) if dep_page else 0
-            obj.insert_writer_page(code) if w_page else 0
+            if dep_page == True:
+                obj.insert_department_page(code)
+            if w_page == True:
+                obj.insert_writer_page(code)
 
         except Exception as e:
             print(e)
