@@ -1,14 +1,17 @@
 import sys
 import os.path
+from pathlib import Path
 import docx
 import re
 import random
 import readtime
+import csv
 
 
 class VerityPlatform:
 
     def __init__(self):
+        self.file_path = ''
         self.fulltext = []
         self.text_string = ''
         self.article_title_insert = ''
@@ -23,9 +26,15 @@ class VerityPlatform:
         self.article_date = ''
         self.readtime = ''
 
+    def path_handler(self, file_path):
+        self.file_path = Path(file_path)
+        self.file_path = self.file_path / "raw_data.txt"
+        print(self.file_path)
+        return
+
     def extract_article_contents(self, article_number_code):
         # call the article doc
-        file = docx.Document('D:/CS/web/Verity/Verily/articles/article' + str(article_number_code) + '.docx')
+        file = docx.Document('D:/CS/web/Verily/Verily/articles/article' + str(article_number_code) + '.docx')
 
         # extract the article into paragraphs and substitute special characters
         for para in file.paragraphs:
@@ -43,6 +52,7 @@ class VerityPlatform:
 
         # extract the title and the articlepage.html name from the article
         self.article_title_insert = self.fulltext[0].strip()
+        self.article_title_insert = re.sub('"', "'", self.article_title_insert)
         self.title_word_count = self.article_title_insert.lower().split(' ')
         self.article_title_code = "article"
         if len(self.title_word_count) >= 3:
@@ -79,6 +89,22 @@ class VerityPlatform:
         self.department = 'Creativity' if article_number_code in [33, 34, 35, 36, 37, 38] else self.department
         self.department = 'Biz & Eco' if article_number_code in [39, 40, 41] else self.department
 
+        with open('article_info.csv', mode='r+', newline="\n") as article_info:
+            reader = csv.reader(article_info, delimiter=',')
+            for row in reader:
+                if str(row[0]) == str(article_number_code):
+                    self.department = 'Tech' if str(row[3][0]) == 'T' else self.department
+                    self.department = 'Sports' if str(row[3][0]) == 'S' else self.department
+                    self.department = 'Social Change' if str(row[3][1]) == 'o' else self.department
+                    self.department = 'Mental Health' if str(row[3][0]) == 'M' else self.department
+                    self.department = 'Global' if str(row[3][0]) == 'G' else self.department
+                    self.department = 'Entertainment' if str(row[3][0]) == 'E' else self.department
+                    self.department = 'Education' if str(row[3][1]) == 'd' else self.department
+                    self.department = 'Creativity' if str(row[3][0]) == 'C' else self.department
+                    self.department = 'Biz & Eco' if str(row[3][0]) == 'B' else self.department
+                    self.article_date = str(row[4])
+                    break
+
         self.department_code = (self.department.split(' '))[0].lower()
 
         self.articlepage_code = 'a-' + self.department_code + '-' + self.article_title_code
@@ -95,152 +121,152 @@ class VerityPlatform:
         print("Article details and content extracted, 0")
         return "Article details and content extracted, 0"
 
+    def replace_in_line(self, keyword, line, start, end, article_number_code):
+
+        replacements = {"{{title}}": self.article_title_insert,
+                        "{{department-code}}": self.department_code,
+                        "{{department}}": self.department,
+                        "{{authors}}": self.author_names_insert,
+                        "{{date}}": self.article_date,
+                        "{{read-time}}": str(self.readtime),
+                        "{{number-code}}": str(article_number_code),
+                        "{{author-0-link}}": self.writerpage_codes[0],
+                        "{{author-0}}": self.author_names[0],
+                        "{{author-0-description}}": descriptions.get(
+                            self.writerpage_codes[0], (self.author_names[0] + " is a writer for Verity Today."))}
+
+        new_line = line[:start-1]
+        new_line += replacements.get(keyword, '{error}')
+        new_line += line[end+3:]
+        return new_line
+
     def create_article_page(self, article_number_code):
 
-        with open('D:/CS/web/Verity/Verily/article-template.html', 'r+', encoding='UTF-8') as template:
-            with open('D:/CS/web/Verity/Verily/a-' + str(self.department_code) + '-' +
+        with open('D:/CS/web/Verily/Verily/template-a.html', 'r+', encoding='UTF-8') as template:
+            with open('D:/CS/web/Verily/Verily/a-' + str(self.department_code) + '-' +
                       str(self.article_title_code) + '.html', 'w') as article_page:
 
                 # iterate the article-template page
                 for i, line in enumerate(template, start=0):
 
-                    # insert the article title into the head title
-                    if '<title>Name of Article</title>' in line:
-                        article_page.write('<title>' + str(self.article_title_insert) + '</title>\n')
-                        continue
-
-                    # insert the article information into the breadcrumbs
-                    if '<p class="breadcrumbs"><span class="mr-2"><a href="/index">Home</a></span>  ' \
-                       '<span><a href="/">Departments</a></span>  <span>Departments</span></p>' in line:
-                        article_page.write('<p class="breadcrumbs"><span class="mr-2">'
-                                           '<a href="/index">Home</a></span>  <span class="mr-2"><a href="/d-' +
-                                           str(self.department_code) + '">' +
-                                           str(self.department) + '</a></span>  <span>' +
-                                           str(self.article_title_insert) + '</span></p>\n')
-                        continue
-                    # insert the article title into the header section
-                    if '<h1 class="mb-3 bread hc">Our Departments</h1>' in line:
-                        article_page.write('<h1 class="mb-3 bread hc">' +
-                                           str(self.article_title_insert) + '</h1>\n')
-                        continue
-                    # insert the author name(s) into the header section
-                    if '<p class="auth">Karnav Popat</p>' in line:
-                        article_page.write('<p class="auth">' +
-                                           str(self.author_names_insert) + '&nbsp&nbsp|&nbsp&nbsp' +
-                                           str(self.article_date) + '&nbsp&nbsp|&nbsp&nbsp<span class="hc" '
-                                                                    'style="font-weight: bold;">' +
-                                           str(self.readtime) + '</span></p>\n')
-                        continue
-
-                    # insert an image into the article from images/
-                    if '<img src="images/image_1.jpg" alt="image" class="img-fluid">' in line:
-                        article_page.write('<img src = "articles/article' +
-                                           str(article_number_code) + '.jpg" alt = "image" '
-                                                                      'class ="img-fluid"></div><br>\n')
-                        continue
-
-                    # insert the name of the primary author
-                    if '<h3 class="hc">Author Name</h3>' in line:
-                        article_page.write('<h3 class="hc"><a href="/' +
-                                           str(self.writerpage_codes[0]) + '" class="hc">' +
-                                           str(self.author_names[0] + '</a></h3>\n'))
-                        continue
-                    # insert the description of the primary author
-                    if '<p class="tc">Karnav Popat is a regular writer for Verity Today.</p>' in line:
-                        article_page.write('<p class="tc">' +
-                                           descriptions.get(self.writerpage_codes[0],
-                                                            (self.author_names[0] + " is a writer for Verity Today."))
-                                           + '</p>\n')
-                        continue
-
                     # iterate over the other authors and insert details
-                    for author_number in [2, 3]:
+                    for author_number in [1, 2]:
                         found = False
-                        if len(self.writerpage_codes) == author_number:
+                        if len(self.writerpage_codes) == author_number+1:
                             if '<div class="about-author auth' + str(author_number) + ' d-flex p-4" ' \
                                'style="background-color: rgba(30, 30, 30, 1); display: none !important;">' in line:
                                 article_page.write('<div class="about-author d-flex p-4" '
                                                    'style="background-color: rgba(30, 30, 30, 1);">\n')
                                 found = True
                                 break
-                            if '<h3 class="hc">Author Name' + str(author_number) + '</h3>' in line:
+                            if '<h3 class="hc"><a href="/{{author-' + str(author_number) + \
+                                    '-link}}" class="hc">{{author-' + str(author_number) + '}}</a></h3>' in line:
                                 article_page.write('<h3 class="hc"><a href="/' +
-                                                   str(self.writerpage_codes[author_number-1]) + '" class="hc">' +
-                                                   str(self.author_names[author_number-1] + '</a></h3>\n'))
+                                                   str(self.writerpage_codes[author_number]) + '" class="hc">' +
+                                                   str(self.author_names[author_number] + '</a></h3>\n'))
                                 found = True
                                 break
-                            if '<p class="tc">Karnav Popat' + str(author_number) + \
-                                    ' is a regular writer for Verity Today.</p>' in line:
+                            if '<p class="tc">{{author-' + str(author_number) + '-description}}</p>' in line:
                                 article_page.write('<p class="tc">' +
-                                                   descriptions.get(self.writerpage_codes[author_number-1],
-                                                                    (self.author_names[author_number-1] +
+                                                   descriptions.get(self.writerpage_codes[author_number],
+                                                                    (self.author_names[author_number] +
                                                                      " is a writer for Verity Today.")) + '</p>\n')
                                 found = True
                                 break
                     if found:
                         continue
 
-                    # insert the article as paragraphs
+                    # insert the paragraphs
                     try:
-                        # check for a paragraph slot and insert the equivalent paragraph
-                        for index in range(1, 21):
-                            if "p id='para" + str(index) + "'" in line:
+                        # check for paragraph slots and insert the equivalent paragraphs
+                        if "<p id='para1'></p>" in line:
+                            article_page.write('<p class="articleparagraph" style="color: white;">' +
+                                               str(self.fulltext[2 + 2]) + "</p>\n")
+                            continue
+                        for index in range(2, 21):
+                            if "<p class='para'></p>" in line:
                                 article_page.write('<p class="articleparagraph" style="color: white;">' +
-                                                   str(self.fulltext[2 + (2 * index)]) + "</p>\n")
-                                break
-                        # if there is no equivalent paragraph, replace an empty slot
-                        if "p id='para" + str(index) + "'" not in line:
-                            article_page.write(line)
-
-                    except Exception as paragraph_exception:
-                        if paragraph_exception == 0:
-                            print(paragraph_exception)
+                                                   str(self.fulltext[2 + (2 * index)]) + "</p>\n\n")
+                                continue
+                    except Exception:
                         pass
 
-                # if none of the flag lines are found, rewrite the original line
-                else:
-                    article_page.writelines(line)
+                    while '{{' in line:
+                        for index, character in enumerate(line):
+                            if character == '{' and line[index - 1] == '{':
+                                remaining_line = line[index + 1:]
+                                for last_index, last_character in enumerate(remaining_line):
+                                    if last_character == '}' and remaining_line[last_index - 1] == '}':
+                                        keyword = line[(index - 1):(last_index + 2 + index)]
+                                        index_end = last_index - 1 + index
+                                        line = self.replace_in_line(keyword, line, index, index_end, article_number_code)
+                                        break
+                    article_page.write(line)
 
         print("Article page created successfully, 0")
 
     def insert_department_page(self, article_number_code):
 
-        with open('D:/CS/web/Verity/Verily/d-' + str(self.department_code) + '.html', 'r+') as department_page:
-            with open('D:/CS/web/Verity/Verily/d-temp.html', 'r+') as temporary_page:
+        with open('D:/CS/web/Verily/Verily/d-' + str(self.department_code) + '.html', 'r+') as department_page:
+            with open('D:/CS/web/Verily/Verily/temp-d.html', 'w') as temporary_page:
                 for i, line in enumerate(department_page, start=0):
                     temporary_page.writelines(line)
 
-        with open('D:/CS/web/Verity/Verily/d-temp.html', 'r+') as temporary_page:
-            with open('D:/CS/web/Verity/Verily/d-' + str(self.department_code) + '.html', 'w') as department_page:
+        with open('D:/CS/web/Verily/Verily/temp-d.html', 'r+') as temporary_page:
+            with open('D:/CS/web/Verily/Verily/d-' + str(self.department_code) + '.html', 'w') as department_page:
                 finished = False
+                search_finished = False
                 for i, line in enumerate(temporary_page, start=0):
 
                     # write the article block in the department page
                     if '<div class="article"></div>' in line and not finished:
-                        department_page.write('                      <div class="col-md-6">\n')
-                        department_page.write('                          <div class="blog-entry ftco-animate">\n')
-                        department_page.write('                              <a href="/article' +
-                                              str(article_number_code) +
+                        department_page.write('<div class="article"></div>\n\n')
+                        department_page.write('<div class="col-md-6">\n')
+                        department_page.write('<div class="blog-entry ftco-animate">\n')
+                        department_page.write('<a href="/' + self.articlepage_code +
                                               '" class="img img-2" style="background-image: url(articles/article' +
                                               str(article_number_code) + '.jpg);"></a>\n')
-                        department_page.write('                              <div class="text text-2 pt-2 mt-3">\n')
-                        department_page.write('                                  <a href="/article' +
-                                              str(article_number_code) + '"><h3 class="mb-2 hc">' +
-                                              self.article_title_insert + '</h3></a>\n')
-                        department_page.write('                                  <div class="meta-wrap">\n')
-                        department_page.write('                                      <p class="meta">\n')
-                        department_page.write('                                          <span><i class="icon-calendar '
-                                              'mr-2"></i>' + self.article_date + '</span>\n')
-                        department_page.write('                                          <span>'
-                                              '<i class="icon-folder-o mr-2"></i><a href="/' +
+                        department_page.write('<div class="text text-2 pt-2 mt-3">\n')
+                        department_page.write('<a href="/' + self.articlepage_code +
+                                              '"><h3 class="mb-2 hc">' + self.article_title_insert + '</h3></a>\n')
+                        department_page.write('<div class="meta-wrap">\n')
+                        department_page.write('<p class="meta">\n')
+                        department_page.write('<span><i class="icon-calendar mr-2"></i>' +
+                                              self.article_date + '</span>\n')
+                        department_page.write('<span><i class="icon-folder-o mr-2"></i><a href="/' +
                                               self.writerpage_codes[0] + '" class="hc">' +
                                               self.author_names[0] + '</a></span>\n')
-                        department_page.write('                                      </p>\n')
-                        department_page.write('                                  </div>\n')
-                        department_page.write('                              </div>\n')
-                        department_page.write('                          </div>\n')
-                        department_page.write('                      </div>\n\n')
+                        department_page.write('</p>\n')
+                        department_page.write('</div>\n')
+                        department_page.write('</div>\n')
+                        department_page.write('</div>\n')
+                        department_page.write('</div>\n\n')
                         finished = True
+
+                    # write the article block in the search block
+                    elif '<div class="article-searchable"></div>' in line and not search_finished:
+                        department_page.write('<div class="col-md-6 searchable" style="display: none;">\n')
+                        department_page.write('<div class="blog-entry ftco-animate">\n')
+                        department_page.write('<a href="/' + self.articlepage_code +
+                                              '" class="img img-2" style="background-image: url(articles/article' +
+                                              str(article_number_code) + '.jpg);"></a>\n')
+                        department_page.write('<div class="text text-2 pt-2 mt-3">\n')
+                        department_page.write('<a href="/' + self.articlepage_code +
+                                              '"><h3 class="mb-2 hc">' + self.article_title_insert + '</h3></a>\n')
+                        department_page.write('<div class="meta-wrap">\n')
+                        department_page.write('<p class="meta">\n')
+                        department_page.write('<span><i class="icon-calendar mr-2"></i>' +
+                                              self.article_date + '</span>\n')
+                        department_page.write('<span><i class="icon-folder-o mr-2"></i><a href="/' +
+                                              self.writerpage_codes[0] + '" class="hc">' +
+                                              self.author_names[0] + '</a></span>\n')
+                        department_page.write('</p>\n')
+                        department_page.write('</div>\n')
+                        department_page.write('</div>\n')
+                        department_page.write('</div>\n')
+                        department_page.write('</div>\n\n')
+                        department_page.write('<div class="article-searchable"></div>\n\n')
+                        search_finished = True
 
                     # if the flag line isn't found, rewrite the original line
                     else:
@@ -254,10 +280,10 @@ class VerityPlatform:
         for author_counter in range(0, len(self.author_names)):
 
             # check if a w-page needs to be created for the author
-            if not os.path.isfile('D:/CS/web/Verity/Verily/' + self.writerpage_codes[author_counter] + '.html'):
+            if not os.path.isfile('D:/CS/web/Verily/Verily/' + self.writerpage_codes[author_counter] + '.html'):
 
-                with open('D:/CS/web/Verity/Verily/w-template.html', 'r+') as writer_template:
-                    with open('D:/CS/web/Verity/Verily/' + self.writerpage_codes[author_counter] +
+                with open('D:/CS/web/Verily/Verily/template-w.html', 'r+') as writer_template:
+                    with open('D:/CS/web/Verily/Verily/' + self.writerpage_codes[author_counter] +
                               '.html', 'w') as writer_page:
 
                         # iterate the w-template page
@@ -274,7 +300,7 @@ class VerityPlatform:
                                '<span class="mr-2">Author</span></p>' in line:
                                 writer_page.write('<p class="breadcrumbs"><span class="mr-2"><a href="/index">Home</a>'
                                                   '</span> <span class="mr-2"><a href="/team">The Team</a></span>'
-                                                  '<span class="mr-2">' +
+                                                  '<span class="mr-2 final-link">' +
                                                   self.author_names[author_counter].split(' ')[0] + '</span></p>\n')
                                 continue
                             # insert the author name into the header section
@@ -285,7 +311,7 @@ class VerityPlatform:
                             # insert the author profile picture into the header section
                             if '<div class="img" style="background-image: url(images/w-author.jpg);">' in line:
                                 # check if a personal profile picture exists and insert it if it does
-                                if os.path.isfile('D:/CS/web/Verity/Verily/images/' +
+                                if os.path.isfile('D:/CS/web/Verily/Verily/images/' +
                                                   self.writerpage_codes[author_counter] + '.jpg'):
                                     writer_page.write('<div class="img" style="background-image: url(images/' +
                                                       self.writerpage_codes[author_counter] + '.jpg);">\n')
@@ -338,16 +364,16 @@ class VerityPlatform:
                 print("Writer page created successfully, 0")
 
             # check if a w-page already exists for the author
-            elif os.path.isfile('D:/CS/web/Verity/Verily/' + self.writerpage_codes[author_counter] + '.html'):
+            elif os.path.isfile('D:/CS/web/Verily/Verily/' + self.writerpage_codes[author_counter] + '.html'):
 
-                with open('D:/CS/web/Verity/Verily/' + self.writerpage_codes[author_counter] +
+                with open('D:/CS/web/Verily/Verily/' + self.writerpage_codes[author_counter] +
                           '.html', 'r+') as writer_page:
-                    with open('D:/CS/web/Verity/Verily/w-temp.html', 'w') as temp_writer:
+                    with open('D:/CS/web/Verily/Verily/temp-w.html', 'w') as temp_writer:
                         for i, line in enumerate(writer_page, start=0):
                             temp_writer.writelines(line)
 
-                with open('D:/CS/web/Verity/Verily/w-temp.html', 'r+') as temp_writer:
-                    with open('D:/CS/web/Verity/Verily/' + self.writerpage_codes[author_counter] +
+                with open('D:/CS/web/Verily/Verily/temp-w.html', 'r+') as temp_writer:
+                    with open('D:/CS/web/Verily/Verily/' + self.writerpage_codes[author_counter] +
                               '.html', 'r+') as writer_page:
                         finished = False
 
@@ -355,6 +381,7 @@ class VerityPlatform:
 
                             if '<div class="article"></div>' in line and not finished:
 
+                                writer_page.write('<div class="article"></div>\n')
                                 writer_page.write('<div class="col-md-4 searchable">\n')
                                 writer_page.write('<div class="blog-entry ftco-animate">\n')
                                 writer_page.write('<a href="/' + self.articlepage_code +
@@ -366,7 +393,7 @@ class VerityPlatform:
                                 writer_page.write('<div class="meta-wrap">\n')
                                 writer_page.write('<p class="meta">\n')
                                 writer_page.write('<span><i class="icon-calendar mr-2"></i>June 2020</span>\n')
-                                writer_page.write('<span><i class="icon-folder-o mr-2"></i><a href="/' +
+                                writer_page.write('<span><i class="icon-folder-o mr-2"></i><a href="/d-' +
                                                   self.department_code + '" class="hc">' +
                                                   self.department + '</a></span>\n')
                                 writer_page.write('</p>\n')
@@ -374,7 +401,6 @@ class VerityPlatform:
                                 writer_page.write('</div>\n')
                                 writer_page.write('</div>\n')
                                 writer_page.write('</div>\n\n')
-                                writer_page.write('<div class="article"></div>\n')
                                 finished = True
 
                             else:
@@ -383,46 +409,29 @@ class VerityPlatform:
                 print("Writer page updated successfully, 0")
 
 
-descriptions = {'w-karnavpopat': 'Karnav writes on Business & Economics and Technology, and heads '
-                                 'the Sports department. He also helps with the Technical Team.',
-                'w-manavagarwal': 'Manav is the Head of the Technology Department for Verity Today.',
-                'w-pradyumnnahata': 'Pradyumn writes on Business & Economics and Sports, '
-                                    'and heads the Entertainment department.',
-                'w-avyaytulsyan': 'Avyay writes on Business & Economics and Sports, '
-                                  'and heads the Global Affairs & Politics department.',
-                'w-akashnath': 'Akash is the Head of the Social Change Department for Verity Today.',
-                'w-rishitachatterjee': 'Rishita is the Head of the Business & Eco Department for Verity Today.',
-                'w-kunjikakanoi': 'Kunjika is the Head of the Creativity Department for Verity Today.',
-                'w-siddharthshroff': 'Siddharth is the Head of the Social Change Department for Verity Today.',
-                'w-nityakaul': 'Nitya is the Head of the Creativity Department for Verity Today.',
-                'w-eshanbanerjie': 'Eshan is the Head of the Panel Discussions Department for Verity Today.',
-                'w-arunavghosh': 'Arunav is the Head of the Education Department for Verity Today.',
-                'w-sarahaziz': 'Sarah is a contributor for Verity Today.',
-                'w-raaginipoddar': 'Raagini is a contributor for Verity Today.',
-                'w-sonakshiroychoudhury': 'Sonakshi is the Head of the Social Media Department for Verity Today.',
-                'w-adyasarda': 'Adya leads Project Abhay, a project in collaboration with Verity Today.',
-                'w-vartikajain': 'Varitka leads Project Abhay, a project in collaboration with Verity Today.'
-                }
+descriptions = {'w-karnavpopat': 'Karnav writes for Tech, Sports and Biz, and maintains this site.'}
 
 if __name__ == '__main__':
     # select mode of insertion
+    path = 'D:/CS/web/Verily/Verily/'
     dep_page = input('Do you want to insert the articles into the department pages?')
     w_page = input('Do you want to insert the articles into the author page(s)?')
 
     # insert the articles
-    for code in range(46, 47):
+    for code in range(41, 42):
         # exclude the articles which need image grid templates
-        if code in [8, 12, 31, 34, 36]:
-            continue
+        if code in range(-1, -1):
+            pass
 
         try:
             obj = VerityPlatform()
             print(code)  # article number
             obj.extract_article_contents(code)
             obj.create_article_page(code)
-            if dep_page == True:
+            if dep_page[0].lower() == 'y':
+                print("f")
                 obj.insert_department_page(code)
-            if w_page == True:
+            if w_page[0].lower() == 'y':
                 obj.insert_writer_page(code)
 
         except Exception as e:
